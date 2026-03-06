@@ -3,38 +3,50 @@ using UnityEngine;
 public class CharacterRunner : MonoBehaviour
 {
     [Header("Movement Settings")]
-    public float moveSpeed = 5f;
-    public float jumpForce = 7f;
+    public float moveSpeed = 8f; // Faster speed helps clear jumps
+    public float jumpForce = 12f;
 
     private Rigidbody rb;
     private bool isGrounded;
 
     void Start()
     {
-        // Get the Rigidbody component for physics-based jumping
         rb = GetComponent<Rigidbody>();
+        // Keep the runner upright
+        rb.constraints = RigidbodyConstraints.FreezeRotation;
+        // Important for fast movement
+        rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
     }
 
-    void Update()
+    void FixedUpdate()
     {
-        // Move the character constantly in the negative X direction
-        transform.Translate(Vector3.left * moveSpeed * Time.deltaTime);
+        // We only control X and keep the existing Y velocity (gravity/jump)
+        rb.linearVelocity = new Vector3(-moveSpeed, rb.linearVelocity.y, 0);
     }
 
-    // Detect when the character touches another collider
     private void OnCollisionEnter(Collision collision)
     {
-        // Check if the object we hit is a "Cube" 
-        // Tip: You can also use Tags (e.g., collision.gameObject.CompareTag("Obstacle"))
-        if (collision.gameObject.name.Contains("Cube"))
+        // Using Tags is much cleaner than checking names!
+        if (collision.gameObject.CompareTag("Obstacle") || collision.gameObject.name.Contains("Cube"))
         {
             Jump();
         }
+    }
 
-        // Logic to reset jump ability when touching the ground
-        if (collision.gameObject.name.Contains("Floor") || collision.gameObject.CompareTag("Ground"))
+    // Check if staying on ground
+    private void OnCollisionStay(Collision collision)
+    {
+        if (collision.gameObject.CompareTag("Ground") || collision.gameObject.name.Contains("Floor"))
         {
             isGrounded = true;
+        }
+    }
+
+    private void OnCollisionExit(Collision collision)
+    {
+        if (collision.gameObject.CompareTag("Ground") || collision.gameObject.name.Contains("Floor"))
+        {
+            isGrounded = false;
         }
     }
 
@@ -42,10 +54,10 @@ public class CharacterRunner : MonoBehaviour
     {
         if (isGrounded)
         {
-            // Apply upward force
-            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+            // Set Y velocity directly for a snappy, instant jump
+            rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpForce, 0);
             isGrounded = false;
-            Debug.Log("Character jumped over the cube!");
+            Debug.Log("Jumping!");
         }
     }
 }
